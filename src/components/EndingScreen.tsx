@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Copy, Check, Crown, RotateCcw } from 'lucide-react';
+import { Mail, Copy, Check, Crown, RotateCcw, Sparkles } from 'lucide-react';
 
 interface EndingScreenProps {
   deaths: number;
@@ -37,15 +37,15 @@ export const EndingScreen: React.FC<EndingScreenProps> = ({ deaths, onResetTrial
   return (
     <div className="relative z-10 mx-auto w-full max-w-2xl px-4 py-8 sm:py-12 text-center animate-fade-in">
       {/* Crown / Elden Lord Emblem */}
-      <div className="relative mb-6 flex items-center justify-center">
-        <div className="absolute h-40 w-40 rounded-full bg-er-gold/15 blur-3xl pointer-events-none animate-pulse-slow" />
-        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-er-gold/50 bg-er-surface shadow-gold-glow">
+      <div className="relative mb-4 flex items-center justify-center">
+        <div className="absolute h-44 w-44 rounded-full bg-er-gold/20 blur-3xl pointer-events-none animate-pulse-slow" />
+        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-er-gold bg-er-surface shadow-gold-glow">
           <Crown className="h-10 w-10 text-er-goldBright animate-shimmer" />
         </div>
       </div>
 
       {/* Title */}
-      <div className="space-y-2 mb-8">
+      <div className="space-y-1 mb-8">
         <p className="text-xs uppercase tracking-souls-wide text-er-goldDim">
           The Thorns Recede
         </p>
@@ -56,6 +56,42 @@ export const EndingScreen: React.FC<EndingScreenProps> = ({ deaths, onResetTrial
           <div className="h-[1px] w-16 bg-gradient-to-r from-transparent to-er-gold" />
           <div className="h-2 w-2 rotate-45 border border-er-gold bg-er-gold/50" />
           <div className="h-[1px] w-16 bg-gradient-to-l from-transparent to-er-gold" />
+        </div>
+      </div>
+
+      {/* GRAND HAPPY BIRTHDAY HERO CARD WITH PICTURE */}
+      <div className="relative mb-10 overflow-hidden border-2 border-er-gold bg-gradient-to-b from-[#18161d] via-[#111015] to-[#0a0a0d] p-6 sm:p-8 shadow-gold-glow-lg text-center">
+        {/* Decorative Golden Corner Runes */}
+        <div className="absolute top-1.5 left-1.5 h-3 w-3 border-t-2 border-l-2 border-er-goldBright" />
+        <div className="absolute top-1.5 right-1.5 h-3 w-3 border-t-2 border-r-2 border-er-goldBright" />
+        <div className="absolute bottom-1.5 left-1.5 h-3 w-3 border-b-2 border-l-2 border-er-goldBright" />
+        <div className="absolute bottom-1.5 right-1.5 h-3 w-3 border-b-2 border-r-2 border-er-goldBright" />
+
+        {/* Nima's Portrait */}
+        <div className="relative mx-auto mb-6 w-48 sm:w-56 overflow-hidden rounded-xl border-2 border-er-gold/90 shadow-[0_0_30px_rgba(197,160,89,0.35)]">
+          <img
+            src="./images/nima.png"
+            alt="Nima, Elden Lord"
+            className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+          />
+          <div className="absolute inset-0 ring-1 ring-inset ring-er-gold/30 pointer-events-none" />
+        </div>
+
+        {/* Big Happy Birthday Announcement */}
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 text-er-goldDim text-xs font-mono uppercase tracking-widest mb-1">
+            <Sparkles className="h-3.5 w-3.5 text-er-goldBright animate-spin" style={{ animationDuration: '6s' }} />
+            <span>Natal Anniversary Decree</span>
+            <Sparkles className="h-3.5 w-3.5 text-er-goldBright animate-spin" style={{ animationDuration: '6s' }} />
+          </div>
+
+          <h2 className="font-serif text-3xl sm:text-5xl font-black uppercase tracking-souls text-transparent bg-clip-text bg-gradient-to-r from-er-gold via-white to-er-goldBright drop-shadow-[0_0_25px_rgba(230,195,120,0.5)]">
+            Happy Birthday, Nima!
+          </h2>
+
+          <p className="font-serif text-xs sm:text-sm text-er-parchment/90 italic tracking-wider pt-1">
+            Software Architect &bull; Neovim Purist &bull; Elden Lord of the Lands Between
+          </p>
         </div>
       </div>
 

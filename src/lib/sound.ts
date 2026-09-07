@@ -1,38 +1,70 @@
+type SoundStateListener = (isPlaying: boolean, isMuted: boolean) => void;
+
 class SoundController {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private isPlaying: boolean = false;
   private bgmAudio: HTMLAudioElement | null = null;
   private currentTrack: 'ambient' | 'theme' = 'ambient';
   private targetVolume: number = 0.35;
+  private listeners: Set<SoundStateListener> = new Set();
 
   constructor() {
-    // Check localStorage for saved sound preference
-    const saved = localStorage.getItem('er_sound_muted');
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('er_sound_muted') : null;
     this.isMuted = saved === 'true';
-
     if (typeof window !== 'undefined') {
       this.initBgm();
     }
   }
 
+  public subscribe(listener: SoundStateListener): () => void {
+    this.listeners.add(listener);
+    listener(this.isPlaying, this.isMuted);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((fn) => fn(this.isPlaying, this.isMuted));
+  }
+
+  private getAudioUrl(filename: string): string {
+    if (typeof window === 'undefined') return `./audio/${filename}`;
+    // Build robust path relative to current page directory
+    const basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
+    return `${window.location.origin}${basePath}audio/${filename}`;
+  }
+
   private initBgm() {
     if (this.bgmAudio) return;
     try {
-      this.bgmAudio = new Audio('./audio/elden_ring_ambient.mp3');
+      this.bgmAudio = new Audio(this.getAudioUrl('elden_ring_ambient.mp3'));
       this.bgmAudio.loop = true;
+      this.bgmAudio.preload = 'auto';
       this.bgmAudio.volume = this.isMuted ? 0 : this.targetVolume;
 
-      // Handle loading error by falling back to streaming mirror
-      this.bgmAudio.onerror = () => {
+      this.bgmAudio.addEventListener('playing', () => {
+        this.isPlaying = true;
+        this.notify();
+      });
+
+      this.bgmAudio.addEventListener('pause', () => {
+        this.isPlaying = false;
+        this.notify();
+      });
+
+      this.bgmAudio.addEventListener('error', () => {
+        // Fallback to streaming mirror if local file fails
         if (this.bgmAudio && !this.bgmAudio.src.includes('archive.org')) {
           this.bgmAudio.src = 'https://archive.org/download/shoi-miyazawa-yuka-kitamura-yoshimi-kudo-tai-tomisawa-elden-ring-original-game-soundtrack/1-08%20Roundtable%20Hold.mp3';
           if (!this.isMuted) {
             this.bgmAudio.play().catch(() => {});
           }
         }
-      };
+      });
     } catch {
-      // Audio not supported in environment
+      // Audio not supported
     }
   }
 
@@ -48,32 +80,42 @@ class SoundController {
     }
   }
 
-  public startBgm() {
+  /**
+   * Starts or resumes BGM on any user gesture if not muted
+   */
+  public ensurePlayingIfUnmuted() {
+    if (this.isMuted) return;
     this.initBgm();
+    this.initContext();
+
     if (!this.bgmAudio) return;
 
-    if (this.isMuted) {
-      this.bgmAudio.volume = 0;
-    } else {
-      this.bgmAudio.volume = this.targetVolume;
-    }
-
-    this.bgmAudio.play().catch(() => {
-      // Autoplay prevented; will start on next user action
+    this.bgmAudio.volume = this.targetVolume;
+    this.bgmAudio.play().then(() => {
+      this.isPlaying = true;
+      this.notify();
+    }).catch(() => {
+      // Still blocked by browser; will retry on next gesture
     });
+  }
+
+  public startBgm() {
+    this.ensurePlayingIfUnmuted();
   }
 
   public pauseBgm() {
     if (this.bgmAudio) {
       this.bgmAudio.pause();
+      this.isPlaying = false;
+      this.notify();
     }
   }
 
   public playEndingTheme() {
+    this.initBgm();
     if (!this.bgmAudio) return;
     this.currentTrack = 'theme';
 
-    // Fade out current track and switch to Elden Ring main theme
     const fadeOut = setInterval(() => {
       if (!this.bgmAudio) {
         clearInterval(fadeOut);
@@ -83,43 +125,55 @@ class SoundController {
         this.bgmAudio.volume = Math.max(0, this.bgmAudio.volume - 0.05);
       } else {
         clearInterval(fadeOut);
-        this.bgmAudio.src = './audio/elden_ring_theme.mp3';
+        this.bgmAudio.src = this.getAudioUrl('elden_ring_theme.mp3');
         this.bgmAudio.loop = true;
         this.bgmAudio.volume = this.isMuted ? 0 : this.targetVolume;
-        this.bgmAudio.play().catch(() => {});
+        if (!this.isMuted) {
+          this.bgmAudio.play().then(() => {
+            this.isPlaying = true;
+            this.notify();
+          }).catch(() => {});
+        }
       }
     }, 50);
   }
 
   public resetToAmbient() {
+    this.initBgm();
     if (!this.bgmAudio) return;
     if (this.currentTrack === 'ambient') return;
     this.currentTrack = 'ambient';
-    this.bgmAudio.src = './audio/elden_ring_ambient.mp3';
+    this.bgmAudio.src = this.getAudioUrl('elden_ring_ambient.mp3');
     this.bgmAudio.loop = true;
     this.bgmAudio.volume = this.isMuted ? 0 : this.targetVolume;
     if (!this.isMuted) {
-      this.bgmAudio.play().catch(() => {});
+      this.bgmAudio.play().then(() => {
+        this.isPlaying = true;
+        this.notify();
+      }).catch(() => {});
     }
   }
 
   /**
-   * Ducks background music volume temporarily during deaths
+   * Duck background music volume temporarily during deaths
    */
   public duckBgm(durationMs = 3500) {
-    if (!this.bgmAudio || this.isMuted) return;
+    if (!this.bgmAudio || this.isMuted || !this.isPlaying) return;
 
     const originalVol = this.targetVolume;
     this.bgmAudio.volume = 0.04;
 
     setTimeout(() => {
-      if (this.bgmAudio && !this.isMuted) {
+      if (this.bgmAudio && !this.isMuted && this.isPlaying) {
         this.bgmAudio.volume = originalVol;
       }
     }, durationMs);
   }
 
   public toggleMute(): boolean {
+    this.initBgm();
+    this.initContext();
+
     this.isMuted = !this.isMuted;
     localStorage.setItem('er_sound_muted', String(this.isMuted));
 
@@ -127,17 +181,29 @@ class SoundController {
       if (this.isMuted) {
         this.bgmAudio.volume = 0;
         this.bgmAudio.pause();
+        this.isPlaying = false;
       } else {
         this.bgmAudio.volume = this.targetVolume;
-        this.bgmAudio.play().catch(() => {});
+        this.bgmAudio.play().then(() => {
+          this.isPlaying = true;
+          this.notify();
+        }).catch(() => {
+          this.isPlaying = false;
+          this.notify();
+        });
       }
     }
 
+    this.notify();
     return this.isMuted;
   }
 
   public getMuted(): boolean {
     return this.isMuted;
+  }
+
+  public getIsPlaying(): boolean {
+    return this.isPlaying;
   }
 
   /**
@@ -159,7 +225,7 @@ class SoundController {
       const gain = this.ctx.createGain();
 
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(55, now); // A1 note
+      osc1.frequency.setValueAtTime(55, now);
       osc1.frequency.exponentialRampToValueAtTime(50, now + 3.0);
 
       osc2.type = 'triangle';
@@ -167,9 +233,8 @@ class SoundController {
       osc2.frequency.exponentialRampToValueAtTime(106, now + 2.5);
 
       osc3.type = 'sine';
-      osc3.frequency.setValueAtTime(164.8, now); // E3 fifth overtone
+      osc3.frequency.setValueAtTime(164.8, now);
 
-      // Gain envelope
       gain.gain.setValueAtTime(0.001, now);
       gain.gain.linearRampToValueAtTime(0.45, now + 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
@@ -201,7 +266,7 @@ class SoundController {
 
     try {
       const now = this.ctx.currentTime;
-      const freqs = [329.63, 493.88, 659.25, 987.77]; // E minor / golden resonance
+      const freqs = [329.63, 493.88, 659.25, 987.77];
 
       freqs.forEach((freq, idx) => {
         if (!this.ctx) return;

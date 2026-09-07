@@ -44,6 +44,16 @@ export function App() {
   });
 
   const [soundMuted, setSoundMuted] = useState<boolean>(() => sound.getMuted());
+  const [soundPlaying, setSoundPlaying] = useState<boolean>(() => sound.getIsPlaying());
+
+  // Subscribe to real-time audio playing/muted updates
+  useEffect(() => {
+    const unsubscribe = sound.subscribe((isPlaying, isMuted) => {
+      setSoundPlaying(isPlaying);
+      setSoundMuted(isMuted);
+    });
+    return unsubscribe;
+  }, []);
 
   // Persist critical progress to localStorage whenever it changes
   useEffect(() => {
@@ -60,16 +70,26 @@ export function App() {
     }
   }, [state.hasStarted, state.currentIndex, state.deaths, state.isFinished]);
 
-  // Resume BGM if trial has already started and user interacts
+  // Global user interaction listener to unlock audio immediately on first tap/click/key
   useEffect(() => {
-    const handleFirstGesture = () => {
-      if (!soundMuted && state.hasStarted) {
-        sound.startBgm();
+    const unlockAudio = () => {
+      if (!soundMuted && !sound.getIsPlaying()) {
+        sound.ensurePlayingIfUnmuted();
       }
     };
-    window.addEventListener('click', handleFirstGesture, { once: true });
-    return () => window.removeEventListener('click', handleFirstGesture);
-  }, [soundMuted, state.hasStarted]);
+
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, [soundMuted]);
 
   const handleToggleSound = () => {
     const isNowMuted = sound.toggleMute();
@@ -79,7 +99,7 @@ export function App() {
 
   const handleStartTrial = () => {
     sound.playSelectSound();
-    sound.startBgm();
+    sound.ensurePlayingIfUnmuted();
     setState((prev) => ({ ...prev, hasStarted: true }));
   };
 
@@ -164,6 +184,7 @@ export function App() {
         hasStarted={state.hasStarted}
         isFinished={state.isFinished}
         soundMuted={soundMuted}
+        soundPlaying={soundPlaying}
         onToggleSound={handleToggleSound}
         onResetTrial={handleResetTrial}
       />
