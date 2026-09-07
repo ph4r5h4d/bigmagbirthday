@@ -37,7 +37,20 @@ The compiled static files will be placed in the `dist/` directory.
 
 The repository includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that automatically builds and deploys the site on pushes to the `main` branch.
 
-To enable GitHub Pages in your repository:
-1. Go to **Settings** > **Pages**.
-2. Under **Build and deployment** > **Source**, choose **GitHub Actions**.
-3. Push to `main` (or run the workflow manually under the Actions tab).
+### Custom Domain: `nima.ph4r5h4d.me`
+
+A `public/CNAME` file is included with `nima.ph4r5h4d.me`.
+
+1. **DNS Setup**:
+   In your DNS provider for `ph4r5h4d.me`, add a **CNAME** record:
+   - **Type**: `CNAME`
+   - **Name / Host**: `nima`
+   - **Value / Target**: `<your-github-username>.github.io`
+
+2. **Enable GitHub Pages**:
+   - Go to your GitHub repository: **Settings** &rarr; **Pages**.
+   - Under **Build and deployment** &rarr; **Source**, select **GitHub Actions**.
+   - Under **Custom domain**, verify `nima.ph4r5h4d.me` is listed and check **Enforce HTTPS** (once DNS finishes propagating).
+
+3. **Deploy**:
+   - Push to `main` (the workflow will automatically build and publish).
