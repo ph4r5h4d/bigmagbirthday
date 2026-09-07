@@ -19,14 +19,14 @@ const INSULT_POOL: InsultEntry[] = [
     category: 'general',
     text: 'You designed distributed systems with nine nines of uptime, yet collapsed on a single byte of common knowledge.',
   },
-  // Persian sarcastic cuts
+  // Architectural & System cuts
   {
     category: 'general',
-    text: 'تارنیشد گرامی، معماری‌ات هم مثل حافظه‌ات انقدر متزلزل است؟ کوئین ماریکا از خجالت سر به بیابان گذاشت.',
+    text: 'A catastrophic architectural failure in production. Panic-rolling will not recover this lost reputation.',
   },
   {
     category: 'general',
-    text: 'افتضاح بود. حتی اسپم کردن roll هم نمی‌تواند آبروی ریخته را برگرداند.',
+    text: 'Not even a 1,000-line custom Lua configuration in Neovim could buffer you from this utter collapse of reasoning.',
   },
   // Souls / Wiki jabs
   {
@@ -80,7 +80,7 @@ const BIRTHDAY_PARDONS: string[] = [
   'Grace is on clearance today. The calendar spared you from starting at step one. Rise, birthday boy.',
   'A year older, yet visibly no wiser. By royal birthday exception, your progress is kept. Try again.',
   'Marika is weary, but not entirely cruel on your natal day. You remain here. Do not make her repeat herself.',
-  'تخفیف روز تولد: از اول شروع نمی‌کنی، همین سوال را دوباره جواب بده و آبروداری کن.',
+  'Birthday dispensation in effect: you do not reset to zero. Answer this very question again and salvage what little honor remains.',
 ];
 
 /**
