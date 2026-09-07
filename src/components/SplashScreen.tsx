@@ -82,8 +82,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onBegin, savedProgre
         </span>
       </button>
 
+      <p className="mt-4 text-[12px] font-serif italic text-er-goldDim/80 tracking-wide">
+        &bull; Touching Grace awakens the soundtrack &amp; begins the trial &bull;
+      </p>
+
       {savedProgressIndex > 0 && (
-        <p className="mt-3 text-[11px] font-mono tracking-wider text-er-ash">
+        <p className="mt-2 text-[11px] font-mono tracking-wider text-er-ash">
           Resuming at Question {savedProgressIndex + 1} of 7
         </p>
       )}
