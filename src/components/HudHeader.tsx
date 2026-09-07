@@ -8,7 +8,6 @@ interface HudHeaderProps {
   hasStarted: boolean;
   isFinished: boolean;
   soundMuted: boolean;
-  soundPlaying: boolean;
   onToggleSound: () => void;
   onResetTrial: () => void;
 }
@@ -20,7 +19,6 @@ export const HudHeader: React.FC<HudHeaderProps> = ({
   hasStarted,
   isFinished,
   soundMuted,
-  soundPlaying,
   onToggleSound,
   onResetTrial,
 }) => {
@@ -60,42 +58,26 @@ export const HudHeader: React.FC<HudHeaderProps> = ({
         {/* Right: Controls (OST / Audio & discreet Reset) */}
         <div className="flex items-center gap-2 sm:gap-4">
           <button
-            onClick={onToggleSound}
-            aria-label={
-              soundMuted
-                ? 'Unmute soundtrack'
-                : soundPlaying
-                ? 'Mute soundtrack'
-                : 'Play soundtrack'
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSound();
+            }}
+            type="button"
+            aria-label={soundMuted ? 'Turn Elden Ring soundtrack on' : 'Turn Elden Ring soundtrack off'}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all ${
               soundMuted
                 ? 'border border-er-border/60 text-er-ash hover:border-er-gold hover:text-er-gold'
-                : soundPlaying
-                ? 'border border-er-gold/70 text-er-gold bg-er-gold/10'
-                : 'border border-er-goldBright text-er-goldBright bg-er-gold/20 shadow-gold-glow animate-pulse'
+                : 'border border-er-gold text-er-gold bg-er-gold/10 shadow-gold-glow'
             }`}
-            title={
-              soundMuted
-                ? 'Soundtrack Muted (Click to Unmute)'
-                : soundPlaying
-                ? 'Soundtrack Playing (Click to Mute)'
-                : 'Soundtrack Paused (Click to Play)'
-            }
+            title={soundMuted ? 'Soundtrack: OFF (Click to turn on)' : 'Soundtrack: ON (Click to mute)'}
           >
             {soundMuted ? (
               <VolumeX className="h-3.5 w-3.5 text-er-ash" />
-            ) : soundPlaying ? (
-              <Volume2 className="h-3.5 w-3.5 text-er-gold animate-pulse" />
             ) : (
-              <Volume2 className="h-3.5 w-3.5 text-er-goldBright" />
+              <Volume2 className="h-3.5 w-3.5 text-er-gold animate-pulse" />
             )}
-            <span className="text-[11px] font-mono tracking-normal">
-              {soundMuted
-                ? 'OST: OFF'
-                : soundPlaying
-                ? 'OST: ON'
-                : 'OST: TAP TO PLAY'}
+            <span className="text-[11px] font-mono tracking-normal font-semibold">
+              {soundMuted ? 'OST: OFF' : 'OST: ON'}
             </span>
           </button>
 

@@ -44,12 +44,10 @@ export function App() {
   });
 
   const [soundMuted, setSoundMuted] = useState<boolean>(() => sound.getMuted());
-  const [soundPlaying, setSoundPlaying] = useState<boolean>(() => sound.getIsPlaying());
 
-  // Subscribe to real-time audio playing/muted updates
+  // Subscribe to real-time audio muted updates
   useEffect(() => {
-    const unsubscribe = sound.subscribe((isPlaying, isMuted) => {
-      setSoundPlaying(isPlaying);
+    const unsubscribe = sound.subscribe((_isPlaying, isMuted) => {
       setSoundMuted(isMuted);
     });
     return unsubscribe;
@@ -70,27 +68,6 @@ export function App() {
     }
   }, [state.hasStarted, state.currentIndex, state.deaths, state.isFinished]);
 
-  // Global user interaction listener to unlock audio immediately on first tap/click/key
-  useEffect(() => {
-    const unlockAudio = () => {
-      if (!soundMuted && !sound.getIsPlaying()) {
-        sound.ensurePlayingIfUnmuted();
-      }
-    };
-
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('pointerdown', unlockAudio);
-    window.addEventListener('keydown', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-
-    return () => {
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('pointerdown', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-    };
-  }, [soundMuted]);
-
   const handleToggleSound = () => {
     const isNowMuted = sound.toggleMute();
     setSoundMuted(isNowMuted);
@@ -99,7 +76,7 @@ export function App() {
 
   const handleStartTrial = () => {
     sound.playSelectSound();
-    sound.ensurePlayingIfUnmuted();
+    sound.startBgm();
     setState((prev) => ({ ...prev, hasStarted: true }));
   };
 
@@ -184,7 +161,6 @@ export function App() {
         hasStarted={state.hasStarted}
         isFinished={state.isFinished}
         soundMuted={soundMuted}
-        soundPlaying={soundPlaying}
         onToggleSound={handleToggleSound}
         onResetTrial={handleResetTrial}
       />

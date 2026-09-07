@@ -31,7 +31,6 @@ class SoundController {
 
   private getAudioUrl(filename: string): string {
     if (typeof window === 'undefined') return `./audio/${filename}`;
-    // Build robust path relative to current page directory
     const basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
     return `${window.location.origin}${basePath}audio/${filename}`;
   }
@@ -81,26 +80,23 @@ class SoundController {
   }
 
   /**
-   * Starts or resumes BGM on any user gesture if not muted
+   * Starts background music if not muted
    */
-  public ensurePlayingIfUnmuted() {
-    if (this.isMuted) return;
+  public startBgm() {
     this.initBgm();
     this.initContext();
 
-    if (!this.bgmAudio) return;
+    if (this.isMuted) return;
 
-    this.bgmAudio.volume = this.targetVolume;
-    this.bgmAudio.play().then(() => {
-      this.isPlaying = true;
-      this.notify();
-    }).catch(() => {
-      // Still blocked by browser; will retry on next gesture
-    });
-  }
-
-  public startBgm() {
-    this.ensurePlayingIfUnmuted();
+    if (this.bgmAudio) {
+      this.bgmAudio.volume = this.targetVolume;
+      this.bgmAudio.play().then(() => {
+        this.isPlaying = true;
+        this.notify();
+      }).catch(() => {
+        // Autoplay policy prevented immediate playback
+      });
+    }
   }
 
   public pauseBgm() {
@@ -109,6 +105,43 @@ class SoundController {
       this.isPlaying = false;
       this.notify();
     }
+  }
+
+  /**
+   * Single definitive toggle method for the UI button
+   */
+  public toggleMute(): boolean {
+    this.initBgm();
+    this.initContext();
+
+    if (this.isMuted || !this.isPlaying) {
+      // Turn ON: unmute and play
+      this.isMuted = false;
+      localStorage.setItem('er_sound_muted', 'false');
+
+      if (this.bgmAudio) {
+        this.bgmAudio.volume = this.targetVolume;
+        this.bgmAudio.play().then(() => {
+          this.isPlaying = true;
+          this.notify();
+        }).catch(() => {
+          this.isPlaying = false;
+          this.notify();
+        });
+      }
+    } else {
+      // Turn OFF: mute and pause
+      this.isMuted = true;
+      localStorage.setItem('er_sound_muted', 'true');
+
+      if (this.bgmAudio) {
+        this.bgmAudio.pause();
+        this.isPlaying = false;
+      }
+    }
+
+    this.notify();
+    return this.isMuted;
   }
 
   public playEndingTheme() {
@@ -154,9 +187,6 @@ class SoundController {
     }
   }
 
-  /**
-   * Duck background music volume temporarily during deaths
-   */
   public duckBgm(durationMs = 3500) {
     if (!this.bgmAudio || this.isMuted || !this.isPlaying) return;
 
@@ -170,34 +200,6 @@ class SoundController {
     }, durationMs);
   }
 
-  public toggleMute(): boolean {
-    this.initBgm();
-    this.initContext();
-
-    this.isMuted = !this.isMuted;
-    localStorage.setItem('er_sound_muted', String(this.isMuted));
-
-    if (this.bgmAudio) {
-      if (this.isMuted) {
-        this.bgmAudio.volume = 0;
-        this.bgmAudio.pause();
-        this.isPlaying = false;
-      } else {
-        this.bgmAudio.volume = this.targetVolume;
-        this.bgmAudio.play().then(() => {
-          this.isPlaying = true;
-          this.notify();
-        }).catch(() => {
-          this.isPlaying = false;
-          this.notify();
-        });
-      }
-    }
-
-    this.notify();
-    return this.isMuted;
-  }
-
   public getMuted(): boolean {
     return this.isMuted;
   }
@@ -206,9 +208,6 @@ class SoundController {
     return this.isPlaying;
   }
 
-  /**
-   * Cathedral death toll / gong for YOU DIED screen
-   */
   public playDeathToll() {
     if (this.isMuted) return;
     this.duckBgm(3500);
@@ -217,8 +216,6 @@ class SoundController {
 
     try {
       const now = this.ctx.currentTime;
-
-      // Low ominous fundamental (bell drone)
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
       const osc3 = this.ctx.createOscillator();
@@ -256,9 +253,6 @@ class SoundController {
     }
   }
 
-  /**
-   * Grace discovery / ethereal chord when advancing
-   */
   public playGraceSound() {
     if (this.isMuted) return;
     this.initContext();
@@ -291,9 +285,6 @@ class SoundController {
     }
   }
 
-  /**
-   * Subtle parchment / rune click feedback
-   */
   public playSelectSound() {
     if (this.isMuted) return;
     this.initContext();
