@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { QUESTIONS } from './data/questions';
 import { getRandomFeedback } from './data/insults';
 import { sound } from './lib/sound';
@@ -13,6 +13,8 @@ import { GraceParticles } from './components/GraceParticles';
 const STORAGE_KEY = 'nima_birthday_trial_state_v1';
 
 export function App() {
+  const bgmRef = useRef<HTMLAudioElement | null>(null);
+
   // Initialize state from localStorage if available
   const [state, setState] = useState<TrialState>(() => {
     try {
@@ -23,10 +25,10 @@ export function App() {
           hasStarted: Boolean(parsed.hasStarted),
           currentIndex: typeof parsed.currentIndex === 'number' ? parsed.currentIndex : 0,
           deaths: typeof parsed.deaths === 'number' ? parsed.deaths : 0,
-          isDead: false, // Don't trap in death screen on reload
+          isDead: false,
           isFinished: Boolean(parsed.isFinished),
           currentFeedback: null,
-          soundEnabled: !sound.getMuted(),
+          soundEnabled: true,
         };
       }
     } catch {
@@ -39,19 +41,15 @@ export function App() {
       isDead: false,
       isFinished: false,
       currentFeedback: null,
-      soundEnabled: !sound.getMuted(),
+      soundEnabled: true,
     };
   });
 
-  const [soundMuted, setSoundMuted] = useState<boolean>(() => sound.getMuted());
-
-  // Subscribe to real-time audio muted updates
-  useEffect(() => {
-    const unsubscribe = sound.subscribe((_isPlaying, isMuted) => {
-      setSoundMuted(isMuted);
-    });
-    return unsubscribe;
-  }, []);
+  // Sound starts muted by default so it shows OFF until the user or "Touch Grace" starts it
+  const [soundMuted, setSoundMuted] = useState<boolean>(() => {
+    const saved = localStorage.getItem('er_sound_muted');
+    return saved === null ? true : saved === 'true';
+  });
 
   // Persist critical progress to localStorage whenever it changes
   useEffect(() => {
@@ -69,15 +67,39 @@ export function App() {
   }, [state.hasStarted, state.currentIndex, state.deaths, state.isFinished]);
 
   const handleToggleSound = () => {
-    const isNowMuted = sound.toggleMute();
-    setSoundMuted(isNowMuted);
-    setState((prev) => ({ ...prev, soundEnabled: !isNowMuted }));
+    const audio = bgmRef.current;
+    if (!audio) return;
+
+    if (soundMuted || audio.paused) {
+      // Turn ON
+      audio.volume = 0.75;
+      audio.play().then(() => {
+        setSoundMuted(false);
+        localStorage.setItem('er_sound_muted', 'false');
+      }).catch((err) => {
+        console.warn('Audio play error:', err);
+      });
+    } else {
+      // Turn OFF
+      audio.pause();
+      setSoundMuted(true);
+      localStorage.setItem('er_sound_muted', 'true');
+    }
   };
 
   const handleStartTrial = () => {
-    sound.playSelectSound();
-    sound.startBgm();
+    sound.playSelectSound(soundMuted);
     setState((prev) => ({ ...prev, hasStarted: true }));
+
+    // Automatically start background music on "Touch Grace"
+    const audio = bgmRef.current;
+    if (audio) {
+      audio.volume = 0.75;
+      audio.play().then(() => {
+        setSoundMuted(false);
+        localStorage.setItem('er_sound_muted', 'false');
+      }).catch(() => {});
+    }
   };
 
   const handleSelectAnswer = useCallback((chosenAnswer: string) => {
@@ -86,12 +108,19 @@ export function App() {
 
     if (chosenAnswer === currentQ.correctAnswer) {
       // Correct! Play grace chime and advance
-      sound.playGraceSound();
+      sound.playGraceSound(soundMuted);
 
       const nextIndex = state.currentIndex + 1;
       if (nextIndex >= QUESTIONS.length) {
-        // Finished all 7 questions!
-        sound.playEndingTheme();
+        // Finished all 7 questions! Switch to Elden Ring ending theme
+        const audio = bgmRef.current;
+        if (audio) {
+          audio.src = './audio/elden_ring_theme.mp3';
+          audio.volume = 0.8;
+          if (!soundMuted) {
+            audio.play().catch(() => {});
+          }
+        }
         setState((prev) => ({
           ...prev,
           isFinished: true,
@@ -105,8 +134,18 @@ export function App() {
         }));
       }
     } else {
-      // Wrong answer! Trigger YOU DIED
-      sound.playDeathToll();
+      // Wrong answer! Duck background music while death toll plays
+      const audio = bgmRef.current;
+      if (audio && !audio.paused) {
+        audio.volume = 0.08;
+        setTimeout(() => {
+          if (audio && !audio.paused) {
+            audio.volume = 0.75;
+          }
+        }, 3500);
+      }
+
+      sound.playDeathToll(soundMuted);
       const feedback = getRandomFeedback(currentQ.universe);
 
       setState((prev) => ({
@@ -116,20 +155,25 @@ export function App() {
         currentFeedback: feedback,
       }));
     }
-  }, [state.currentIndex]);
+  }, [state.currentIndex, soundMuted]);
 
   const handleRetrySameQuestion = useCallback(() => {
-    sound.playSelectSound();
-    // Return to the same question (stay on current index)
+    sound.playSelectSound(soundMuted);
     setState((prev) => ({
       ...prev,
       isDead: false,
       currentFeedback: null,
     }));
-  }, []);
+  }, [soundMuted]);
 
   const handleResetTrial = () => {
-    sound.resetToAmbient();
+    const audio = bgmRef.current;
+    if (audio) {
+      audio.src = './audio/elden_ring_ambient.mp3';
+      if (!soundMuted) {
+        audio.play().catch(() => {});
+      }
+    }
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -142,7 +186,7 @@ export function App() {
       isDead: false,
       isFinished: false,
       currentFeedback: null,
-      soundEnabled: !sound.getMuted(),
+      soundEnabled: true,
     });
   };
 
@@ -150,6 +194,15 @@ export function App() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden bg-er-bg text-er-parchment">
+      {/* Real HTML5 DOM Audio Element */}
+      <audio
+        ref={bgmRef}
+        id="elden-ring-soundtrack"
+        src="./audio/elden_ring_ambient.mp3"
+        loop
+        preload="auto"
+      />
+
       {/* Background ambient embers */}
       <GraceParticles />
 
