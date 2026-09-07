@@ -88,18 +88,20 @@ export function App() {
   };
 
   const handleStartTrial = () => {
-    sound.playSelectSound(soundMuted);
     setState((prev) => ({ ...prev, hasStarted: true }));
 
-    // Automatically start background music on "Touch Grace"
+    // Start background music on Touch Grace unless user explicitly muted it
+    const explicitlyMuted = localStorage.getItem('er_sound_muted') === 'true';
     const audio = bgmRef.current;
-    if (audio) {
+    if (audio && !explicitlyMuted) {
       audio.volume = 0.75;
       audio.play().then(() => {
         setSoundMuted(false);
         localStorage.setItem('er_sound_muted', 'false');
       }).catch(() => {});
     }
+
+    sound.playGraceSound(explicitlyMuted);
   };
 
   const handleSelectAnswer = useCallback((chosenAnswer: string) => {
