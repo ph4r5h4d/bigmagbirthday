@@ -55,21 +55,21 @@ export const HudHeader: React.FC<HudHeaderProps> = ({
           </div>
         )}
 
-        {/* Right: Controls (Sound & discreet Reset) */}
+        {/* Right: Controls (OST / Audio & discreet Reset) */}
         <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={onToggleSound}
-            aria-label={soundMuted ? 'Unmute atmospheric audio' : 'Mute atmospheric audio'}
-            className="flex items-center gap-1 p-1.5 text-er-ash hover:text-er-gold transition-colors"
-            title={soundMuted ? 'Unmute Sound' : 'Mute Sound'}
+            aria-label={soundMuted ? 'Play Elden Ring background soundtrack' : 'Mute Elden Ring background soundtrack'}
+            className="flex items-center gap-1.5 px-2 py-1 rounded border border-er-border/60 hover:border-er-gold text-er-ash hover:text-er-gold transition-all"
+            title={soundMuted ? 'Unmute Soundtrack & Effects' : 'Mute Soundtrack & Effects'}
           >
             {soundMuted ? (
-              <VolumeX className="h-4 w-4" />
+              <VolumeX className="h-3.5 w-3.5 text-er-ash" />
             ) : (
-              <Volume2 className="h-4 w-4 text-er-gold" />
+              <Volume2 className="h-3.5 w-3.5 text-er-gold animate-pulse" />
             )}
-            <span className="hidden sm:inline text-[11px] text-er-ash">
-              {soundMuted ? 'MUTED' : 'AUDIO'}
+            <span className="text-[11px] font-mono">
+              {soundMuted ? 'OST: OFF' : 'OST: ON'}
             </span>
           </button>
 

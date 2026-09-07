@@ -1,11 +1,39 @@
 class SoundController {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private bgmAudio: HTMLAudioElement | null = null;
+  private currentTrack: 'ambient' | 'theme' = 'ambient';
+  private targetVolume: number = 0.35;
 
   constructor() {
     // Check localStorage for saved sound preference
     const saved = localStorage.getItem('er_sound_muted');
     this.isMuted = saved === 'true';
+
+    if (typeof window !== 'undefined') {
+      this.initBgm();
+    }
+  }
+
+  private initBgm() {
+    if (this.bgmAudio) return;
+    try {
+      this.bgmAudio = new Audio('./audio/elden_ring_ambient.mp3');
+      this.bgmAudio.loop = true;
+      this.bgmAudio.volume = this.isMuted ? 0 : this.targetVolume;
+
+      // Handle loading error by falling back to streaming mirror
+      this.bgmAudio.onerror = () => {
+        if (this.bgmAudio && !this.bgmAudio.src.includes('archive.org')) {
+          this.bgmAudio.src = 'https://archive.org/download/shoi-miyazawa-yuka-kitamura-yoshimi-kudo-tai-tomisawa-elden-ring-original-game-soundtrack/1-08%20Roundtable%20Hold.mp3';
+          if (!this.isMuted) {
+            this.bgmAudio.play().catch(() => {});
+          }
+        }
+      };
+    } catch {
+      // Audio not supported in environment
+    }
   }
 
   private initContext() {
@@ -20,9 +48,91 @@ class SoundController {
     }
   }
 
+  public startBgm() {
+    this.initBgm();
+    if (!this.bgmAudio) return;
+
+    if (this.isMuted) {
+      this.bgmAudio.volume = 0;
+    } else {
+      this.bgmAudio.volume = this.targetVolume;
+    }
+
+    this.bgmAudio.play().catch(() => {
+      // Autoplay prevented; will start on next user action
+    });
+  }
+
+  public pauseBgm() {
+    if (this.bgmAudio) {
+      this.bgmAudio.pause();
+    }
+  }
+
+  public playEndingTheme() {
+    if (!this.bgmAudio) return;
+    this.currentTrack = 'theme';
+
+    // Fade out current track and switch to Elden Ring main theme
+    const fadeOut = setInterval(() => {
+      if (!this.bgmAudio) {
+        clearInterval(fadeOut);
+        return;
+      }
+      if (this.bgmAudio.volume > 0.05) {
+        this.bgmAudio.volume = Math.max(0, this.bgmAudio.volume - 0.05);
+      } else {
+        clearInterval(fadeOut);
+        this.bgmAudio.src = './audio/elden_ring_theme.mp3';
+        this.bgmAudio.loop = true;
+        this.bgmAudio.volume = this.isMuted ? 0 : this.targetVolume;
+        this.bgmAudio.play().catch(() => {});
+      }
+    }, 50);
+  }
+
+  public resetToAmbient() {
+    if (!this.bgmAudio) return;
+    if (this.currentTrack === 'ambient') return;
+    this.currentTrack = 'ambient';
+    this.bgmAudio.src = './audio/elden_ring_ambient.mp3';
+    this.bgmAudio.loop = true;
+    this.bgmAudio.volume = this.isMuted ? 0 : this.targetVolume;
+    if (!this.isMuted) {
+      this.bgmAudio.play().catch(() => {});
+    }
+  }
+
+  /**
+   * Ducks background music volume temporarily during deaths
+   */
+  public duckBgm(durationMs = 3500) {
+    if (!this.bgmAudio || this.isMuted) return;
+
+    const originalVol = this.targetVolume;
+    this.bgmAudio.volume = 0.04;
+
+    setTimeout(() => {
+      if (this.bgmAudio && !this.isMuted) {
+        this.bgmAudio.volume = originalVol;
+      }
+    }, durationMs);
+  }
+
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
     localStorage.setItem('er_sound_muted', String(this.isMuted));
+
+    if (this.bgmAudio) {
+      if (this.isMuted) {
+        this.bgmAudio.volume = 0;
+        this.bgmAudio.pause();
+      } else {
+        this.bgmAudio.volume = this.targetVolume;
+        this.bgmAudio.play().catch(() => {});
+      }
+    }
+
     return this.isMuted;
   }
 
@@ -35,6 +145,7 @@ class SoundController {
    */
   public playDeathToll() {
     if (this.isMuted) return;
+    this.duckBgm(3500);
     this.initContext();
     if (!this.ctx) return;
 
@@ -60,7 +171,7 @@ class SoundController {
 
       // Gain envelope
       gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.5, now + 0.08);
+      gain.gain.linearRampToValueAtTime(0.45, now + 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
 
       osc1.connect(gain);

@@ -60,6 +60,17 @@ export function App() {
     }
   }, [state.hasStarted, state.currentIndex, state.deaths, state.isFinished]);
 
+  // Resume BGM if trial has already started and user interacts
+  useEffect(() => {
+    const handleFirstGesture = () => {
+      if (!soundMuted && state.hasStarted) {
+        sound.startBgm();
+      }
+    };
+    window.addEventListener('click', handleFirstGesture, { once: true });
+    return () => window.removeEventListener('click', handleFirstGesture);
+  }, [soundMuted, state.hasStarted]);
+
   const handleToggleSound = () => {
     const isNowMuted = sound.toggleMute();
     setSoundMuted(isNowMuted);
@@ -68,6 +79,7 @@ export function App() {
 
   const handleStartTrial = () => {
     sound.playSelectSound();
+    sound.startBgm();
     setState((prev) => ({ ...prev, hasStarted: true }));
   };
 
@@ -82,6 +94,7 @@ export function App() {
       const nextIndex = state.currentIndex + 1;
       if (nextIndex >= QUESTIONS.length) {
         // Finished all 7 questions!
+        sound.playEndingTheme();
         setState((prev) => ({
           ...prev,
           isFinished: true,
@@ -119,6 +132,7 @@ export function App() {
   }, []);
 
   const handleResetTrial = () => {
+    sound.resetToAmbient();
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
